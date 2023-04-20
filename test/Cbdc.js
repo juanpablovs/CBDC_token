@@ -46,19 +46,37 @@ describe('CBDC contract', function () {
 		});
 
 		it('should revert if the caller is not the controlling party', async function () {
-			const {cbdc, owner, addr1} = await loadFixture(deployCBDCFixture);
+			const {cbdc, addr1} = await loadFixture(deployCBDCFixture);
 			await expect(
 				cbdc.connect(addr1).updateControllingParty(addr1.address),
-			).to.be.revertedWith('not the controlling party');
+			).to.be.revertedWithCustomError(cbdc, 'NotControllingParty');
 		});
 
 		it('should revert if the new controlling party is the zero address', async function () {
-			const {cbdc, owner, addr1} = await loadFixture(deployCBDCFixture);
+			const {cbdc, owner} = await loadFixture(deployCBDCFixture);
 			await expect(
 				cbdc
 					.connect(owner)
 					.updateControllingParty(ethers.constants.AddressZero),
-			).to.be.revertedWith('New controlling party cannot be the zero address');
+			).to.be.revertedWithCustomError(cbdc, 'NotToAddressZero');
+		});
+	});
+
+	describe('updateInterestRate', function () {
+		it('should revert if the caller is not the controlling party', async function () {
+			const {cbdc, addr1} = await loadFixture(deployCBDCFixture);
+			await expect(
+				cbdc.connect(addr1).updateInterestRate(500),
+			).to.be.revertedWithCustomError(cbdc, 'NotControllingParty');
+		});
+
+		// expect(await cbdc.interestRateBasisPoints()).to.equal(600);
+
+		it('should revert if the caller is not the controlling party', async function () {
+			const {cbdc, addr1} = await loadFixture(deployCBDCFixture);
+			await expect(
+				cbdc.connect(addr1).updateInterestRate(500),
+			).to.be.revertedWithCustomError(cbdc, 'NotControllingParty');
 		});
 	});
 });
