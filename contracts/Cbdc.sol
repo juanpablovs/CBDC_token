@@ -33,12 +33,12 @@ contract Cbdc is ERC20{
     controllingParty = newControllingParty;
 
     // as an additional step we transfer all the coins to the new controllingparty
-    _transfer(controllingParty, newControllingParty, balanceOf(controllingParty));
+    _transfer(msg.sender, newControllingParty, balanceOf(msg.sender));
     console.log(
         "Transferring from %s to %s %s tokens",
         controllingParty,
-        controllingParty,
-        balanceOf(controllingParty)
+        newControllingParty,
+        balanceOf(newControllingParty)
     );
 
     emit UpdateControllingParty(controllingParty, newControllingParty);
