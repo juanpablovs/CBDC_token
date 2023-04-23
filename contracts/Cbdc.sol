@@ -6,8 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 // import "hardhat/console.sol";
 
 /// Invalid msg.sender, must be controlling party
-error NotControllingParty (string _message);
-error NotToAddressZero (string _message);
+error NotControllingParty(string _message);
+error NotToAddressZero(string _message);
+error IncorrectAmountValue(string _message);
+error IncorrectBalanceValue(string _message);
 
 contract Cbdc is ERC20 {
     address public controllingParty; // the government
@@ -37,10 +39,12 @@ contract Cbdc is ERC20 {
 
     function updateControllingParty(address newControllingParty) external {
         if (msg.sender != controllingParty) {
-        revert NotControllingParty("Not the controlling party");
+            revert NotControllingParty("Not the controlling party");
         }
         if (newControllingParty == address(0)) {
-            revert NotToAddressZero("New controlling party cannot be the zero address");
+            revert NotToAddressZero(
+                "New controlling party cannot be the zero address"
+            );
         }
 
         address oldControllingParty = controllingParty;
@@ -48,26 +52,49 @@ contract Cbdc is ERC20 {
         controllingParty = newControllingParty;
 
         // as an additional step we transfer all the coins to the new controllingparty
-        _transfer(oldControllingParty, newControllingParty, balanceOf(oldControllingParty));
+        _transfer(
+            oldControllingParty,
+            newControllingParty,
+            balanceOf(oldControllingParty)
+        );
 
         emit UpdateControllingParty(oldControllingParty, newControllingParty);
     }
 
     function updateInterestRate(uint256 newInterestRateBasisPoints) external {
         if (msg.sender != controllingParty) {
-        revert NotControllingParty("Not the controlling party");
+            revert NotControllingParty("Not the controlling party");
         }
         uint256 oldInterestRateBasisPoint = interestRateBasisPoints;
         interestRateBasisPoints = newInterestRateBasisPoints;
-        emit UpdateInterestRate(oldInterestRateBasisPoint, newInterestRateBasisPoints);
+        emit UpdateInterestRate(
+            oldInterestRateBasisPoint,
+            newInterestRateBasisPoints
+        );
     }
 
     function increaseMoneySupply(uint256 inflationAmount) external {
         if (msg.sender != controllingParty) {
-        revert NotControllingParty("Not the controlling party");
+            revert NotControllingParty("Not the controlling party");
         }
         uint256 oldMoneySupply = totalSupply();
         _mint(controllingParty, inflationAmount);
         emit IncreaseMoneySupply(oldMoneySupply, inflationAmount);
     }
+
+    function stakeTreasuryBonds(uint256 amount) external {
+        if (amount <= 0) {
+            revert IncorrectAmountValue("Amount value must be greater than 0");
+        }
+        if (balanceOf(msg.sender) < amount) {
+            revert IncorrectBalanceValue("Balance is less than amount");
+        }
+        _transfer(msg.sender, address(this), amount);
+        if (stakedTreasuryBond[msg.sender] > 0) claimTreasuryBonds();
+        stakedFromTS[msg.sender] = block.timestamp;
+        stakedTreasuryBond[msg.sender] += amount;
+        emit StakeTreasuryBonds(msg.sender, amount);
+    }
+
+    function claimTreasuryBonds() public {}
 }
