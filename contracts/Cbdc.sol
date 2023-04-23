@@ -61,4 +61,13 @@ contract Cbdc is ERC20 {
         interestRateBasisPoints = newInterestRateBasisPoints;
         emit UpdateInterestRate(oldInterestRateBasisPoint, newInterestRateBasisPoints);
     }
+
+    function increaseMoneySupply(uint256 inflationAmount) external {
+        if (msg.sender != controllingParty) {
+        revert NotControllingParty("Not the controlling party");
+        }
+        uint256 oldMoneySupply = totalSupply();
+        _mint(controllingParty, inflationAmount);
+        emit IncreaseMoneySupply(oldMoneySupply, inflationAmount);
+    }
 }

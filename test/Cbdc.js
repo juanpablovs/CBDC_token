@@ -49,7 +49,9 @@ describe("CBDC contract", function () {
 
 		it("Check that the UpdateControllingParty event is emitted", async function () {
 			const { cbdc, owner, addr1 } = await loadFixture(deployCBDCFixture);
-			await expect(cbdc.connect(owner).updateControllingParty(addr1.address))
+			await expect(
+				cbdc.connect(owner).updateControllingParty(addr1.address)
+			)
 				.to.emit(cbdc, "UpdateControllingParty")
 				.withArgs(owner.address, addr1.address);
 		});
@@ -97,6 +99,41 @@ describe("CBDC contract", function () {
 			await expect(cbdc.updateInterestRate(newInterestRate))
 				.to.emit(cbdc, "UpdateInterestRate")
 				.withArgs(oldInterestRate, newInterestRate);
+		});
+	});
+
+	describe("increaseMoneySupply", function () {
+		it("should revert if the caller is not the controlling party", async function () {
+			const { cbdc, addr1 } = await loadFixture(deployCBDCFixture);
+			await expect(
+				cbdc
+					.connect(addr1)
+					.increaseMoneySupply(ethers.utils.parseEther("500"))
+			).to.be.revertedWithCustomError(cbdc, "NotControllingParty");
+		});
+
+		it("check that the initial total supply is 1000", async function () {
+			const { cbdc } = await loadFixture(deployCBDCFixture);
+			expect(await cbdc.totalSupply()).to.equal(
+				ethers.utils.parseEther("1000")
+			);
+		});
+
+		it("should update the total supply to 1100", async function () {
+			const { cbdc } = await loadFixture(deployCBDCFixture);
+			await cbdc.increaseMoneySupply(ethers.utils.parseEther("100"));
+			expect(
+				await cbdc.totalSupply()
+			).to.equal(ethers.utils.parseEther("1100"));
+		});
+
+		it("should emit the IncreaseMoneySupply event", async function () {
+			const { cbdc } = await loadFixture(deployCBDCFixture);
+			const oldTotalSupply = await cbdc.totalSupply();
+			const inflationAmount = 100;
+			await expect(cbdc.increaseMoneySupply(inflationAmount))
+				.to.emit(cbdc, "IncreaseMoneySupply")
+				.withArgs(oldTotalSupply, inflationAmount);
 		});
 	});
 });
