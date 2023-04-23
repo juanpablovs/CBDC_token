@@ -37,25 +37,28 @@ contract Cbdc is ERC20 {
 
     function updateControllingParty(address newControllingParty) external {
         if (msg.sender != controllingParty) {
-        revert NotControllingParty("not the controlling party");
+        revert NotControllingParty("Not the controlling party");
         }
         if (newControllingParty == address(0)) {
             revert NotToAddressZero("New controlling party cannot be the zero address");
         }
 
+        address oldControllingParty = controllingParty;
+
         controllingParty = newControllingParty;
 
         // as an additional step we transfer all the coins to the new controllingparty
-        _transfer(msg.sender, newControllingParty, balanceOf(msg.sender));
+        _transfer(oldControllingParty, newControllingParty, balanceOf(oldControllingParty));
 
-        emit UpdateControllingParty(controllingParty, newControllingParty);
+        emit UpdateControllingParty(oldControllingParty, newControllingParty);
     }
 
     function updateInterestRate(uint256 newInterestRateBasisPoints) external {
         if (msg.sender != controllingParty) {
-        revert NotControllingParty("not the controlling party");
+        revert NotControllingParty("Not the controlling party");
         }
-        uint256 oldInterestRateBasisPoint = newInterestRateBasisPoints;
+        uint256 oldInterestRateBasisPoint = interestRateBasisPoints;
+        interestRateBasisPoints = newInterestRateBasisPoints;
         emit UpdateInterestRate(oldInterestRateBasisPoint, newInterestRateBasisPoints);
     }
 }
