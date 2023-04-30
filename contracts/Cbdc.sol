@@ -10,6 +10,8 @@ error NotControllingParty(string _message);
 error NotToAddressZero(string _message);
 error IncorrectAmountValue(string _message);
 error IncorrectBalanceValue(string _message);
+error IncorrectReclaimedAmount(string _message);
+error BlacklistedAddress(string _message);
 
 contract Cbdc is ERC20 {
     address public controllingParty; // the government
@@ -82,6 +84,14 @@ contract Cbdc is ERC20 {
         emit IncreaseMoneySupply(oldMoneySupply, inflationAmount);
     }
 
+    function updateBlacklist(address criminal, bool blacklisted) external {
+        if (msg.sender != controllingParty) {
+            revert NotControllingParty("Not the controlling party");
+        }
+        blacklist[criminal] = blacklisted;
+        emit UpdateBlacklist(criminal, blacklisted);
+    }
+
     function stakeTreasuryBonds(uint256 amount) external {
         if (amount <= 0) {
             revert IncorrectAmountValue("Amount value must be greater than 0");
@@ -96,5 +106,37 @@ contract Cbdc is ERC20 {
         emit StakeTreasuryBonds(msg.sender, amount);
     }
 
-    function claimTreasuryBonds() public {}
+    function unstakeTreasuryBonds(uint256 amount) external {
+        if (amount <= 0) {
+            revert IncorrectAmountValue("Amount value must be greater than 0");
+        }
+        if (stakedTreasuryBond[msg.sender] >= amount) {
+            revert IncorrectReclaimedAmount("Amount is > than staked");
+        }
+        claimTreasuryBonds();
+        stakedTreasuryBond[msg.sender] -= amount;
+        _transfer(address(this), msg.sender, amount);
+        emit UnstakeTreasuryBonds(msg.sender, amount);
+    }
+
+    function claimTreasuryBonds() public {
+        if (stakedTreasuryBond[msg.sender] > 0) {
+            revert IncorrectAmountValue("Staked is <= 0");
+        }
+        uint256 secondsStaked = block.timestamp - stakedFromTS[msg.sender];
+        uint256 rewards = stakedTreasuryBond[msg.sender] * secondsStaked * interestRateBasisPoints / (10000 * 31536000);
+        stakedFromTS[msg.sender] = block.timestamp;
+        _mint(msg.sender, rewards);
+        emit ClaimTreasuryBonds(msg.sender, rewards);
+    }
+
+    function _transfer(address from, address to, uint256 amount) internal virtual override {
+        if (blacklist[from]) {
+            revert BlacklistedAddress("Sender address is blacklisted");
+        }
+        if (blacklist[to]) {
+            revert BlacklistedAddress("Receiver address is blacklisted");
+        }
+        super._transfer(from, to, amount);
+    }
 }
